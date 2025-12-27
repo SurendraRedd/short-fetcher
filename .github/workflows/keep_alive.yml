@@ -1,28 +1,28 @@
-name: Keep App Active with Dummy Commit
+name: Daily Keep-Alive
 
 on:
   schedule:
-    # Runs at 00:00 UTC every Monday (once a week is usually enough)
-    - cron: '0 0 * * 1'
-  workflow_dispatch: # Allows you to trigger it manually
+    # Runs at 00:00 UTC every single day
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Still allows you to click a button to test it
 
 jobs:
-  dummy-commit:
+  daily-update:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Essential for the bot to push changes
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Make Dummy Change
+      - name: Update Heartbeat File
         run: |
-          echo "Last active: $(date)" > keep_alive.txt
+          echo "Last heartbeat: $(date)" > heartbeat.txt
 
-      - name: Commit and Push
+      - name: Commit and Push Change
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add keep_alive.txt
-          git commit -m "chore: automated keep-alive heartbeat [skip ci]"
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add heartbeat.txt
+          git commit -m "bot: daily heartbeat update [skip ci]"
           git push
