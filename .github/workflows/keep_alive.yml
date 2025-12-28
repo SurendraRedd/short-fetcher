@@ -1,28 +1,59 @@
-name: Daily Keep-Alive
+name: Keep Streamlit App Awake with Selenium
 
 on:
   schedule:
-    # Runs at 00:00 UTC every single day
-    - cron: '0 0 * * *'
-  workflow_dispatch: # Still allows you to click a button to test it
+    - cron: '*/30 * * * *'  # Every 30 minutes – adjust if needed (more frequent is safer)
+  workflow_dispatch:
 
 jobs:
-  daily-update:
+  wake-up:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # Essential for the bot to push changes
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Update Heartbeat File
-        run: |
-          echo "Last heartbeat: $(date)" > heartbeat.txt
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-      - name: Commit and Push Change
+      - name: Install dependencies
         run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Actions"
-          git add heartbeat.txt
-          git commit -m "bot: daily heartbeat update [skip ci]"
-          git push
+          pip install selenium webdriver-manager
+
+      - name: Run wake-up script
+        run: |
+          python - <<'EOF'
+          from selenium import webdriver
+          from selenium.webdriver.chrome.options import Options
+          from selenium.webdriver.common.by import By
+          from webdriver_manager.chrome import ChromeDriverManager
+          from selenium.webdriver.chrome.service import Service
+          import time
+
+          options = Options()
+          options.add_argument("--headless")
+          options.add_argument("--no-sandbox")
+          options.add_argument("--disable-dev-shm-usage")
+          options.add_argument("--disable-gpu")
+          options.add_argument("--window-size=1920,1080")
+
+          driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+          try:
+              driver.get("https://youtube-short-fetcher.streamlit.app")
+              time.sleep(10)  # Wait for page to load
+
+              # If sleep page is detected, click the wake-up button
+              try:
+                  wake_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Yes, get this app back up')]")
+                  wake_button.click()
+                  print("Sleep page detected – clicked wake-up button")
+                  time.sleep(30)  # Wait for app to fully warm up
+              except:
+                  print("App already awake – no action needed")
+
+              print("Page title:", driver.title)
+          finally:
+              driver.quit()
+          EOF
